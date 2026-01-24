@@ -103,7 +103,7 @@ class OrderClient(BaseHyperliquidClient):
         if not user_address:
             raise ValueError("No user address available")
 
-        return self.info.frontend_open_orders(user_address)
+        return {"orders": self.info.frontend_open_orders(user_address)}
 
     async def get_order_status(
         self, order_id: int, user: Optional[str] = None
