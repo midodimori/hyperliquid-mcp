@@ -3,8 +3,8 @@
 from decimal import ROUND_HALF_UP, Decimal
 from typing import Any, Dict, List, Optional
 
+from hyperliquid_mcp.clients.base_client import BaseHyperliquidClient
 from hyperliquid_mcp.logging_config import get_logger
-from hyperliquid_mcp.tools.base_client import BaseHyperliquidClient
 
 logger = get_logger(__name__)
 

@@ -5,7 +5,8 @@ from unittest.mock import patch
 
 from fastmcp import FastMCP
 
-from hyperliquid_mcp.server import main, mcp
+from hyperliquid_mcp.config import Config
+from hyperliquid_mcp.server import create_server, mcp
 
 
 class TestMCPServerIntegration:
@@ -16,8 +17,18 @@ class TestMCPServerIntegration:
         assert isinstance(mcp, FastMCP)
         assert mcp.name == "Hyperliquid MCP Server"
 
+    def test_create_server_with_custom_config(self):
+        """Test that create_server respects config."""
+        config = Config()
+        config.server.name = "Custom Server"
+        server = create_server(config)
+
+        assert isinstance(server, FastMCP)
+        assert server.name == "Custom Server"
+
     def test_all_tools_registered(self):
         """Test that all expected tools are registered with the MCP server."""
+        server = create_server(Config())
         expected_tools = {
             # Account tools
             "get_positions",
@@ -43,10 +54,8 @@ class TestMCPServerIntegration:
             "get_user_fills",
         }
 
-        # Get registered tool names using the correct FastMCP API
-        registered_tools = set(mcp._tool_manager._tools.keys())
+        registered_tools = set(server._tool_manager._tools.keys())
 
-        # Check that all expected tools are registered
         missing_tools = expected_tools - registered_tools
         extra_tools = registered_tools - expected_tools
 
@@ -55,21 +64,43 @@ class TestMCPServerIntegration:
         assert registered_tools == expected_tools
 
     @patch.dict(os.environ, {"HYPERLIQUID_PRIVATE_KEY": "test_key"})
-    @patch("hyperliquid_mcp.server.mcp.run")
-    @patch("hyperliquid_mcp.server.logger")
-    def test_main_with_env_vars(self, mock_logger, mock_run):
+    @patch("hyperliquid_mcp.__main__.create_server")
+    @patch("hyperliquid_mcp.__main__.get_logger")
+    def test_main_with_env_vars(self, mock_get_logger, mock_create_server):
         """Test main function with required environment variables."""
-        main()
+        from unittest.mock import MagicMock
+
+        mock_logger = MagicMock()
+        mock_get_logger.return_value = mock_logger
+        mock_mcp = MagicMock()
+        mock_create_server.return_value = mock_mcp
+
+        from hyperliquid_mcp.__main__ import main
+
+        with patch("sys.argv", ["hyperliquid-mcp"]):
+            # main() calls asyncio.run which would block, so just test arg parsing
+            with patch("asyncio.run"):
+                main()
 
         mock_logger.info.assert_called_with("Starting Hyperliquid MCP Server...")
-        mock_run.assert_called_once()
 
     @patch.dict(os.environ, {}, clear=True)
-    @patch("hyperliquid_mcp.server.mcp.run")
-    @patch("hyperliquid_mcp.server.logger")
-    def test_main_without_env_vars(self, mock_logger, mock_run):
+    @patch("hyperliquid_mcp.__main__.create_server")
+    @patch("hyperliquid_mcp.__main__.get_logger")
+    def test_main_without_env_vars(self, mock_get_logger, mock_create_server):
         """Test main function without required environment variables."""
-        main()
+        from unittest.mock import MagicMock
+
+        mock_logger = MagicMock()
+        mock_get_logger.return_value = mock_logger
+        mock_mcp = MagicMock()
+        mock_create_server.return_value = mock_mcp
+
+        from hyperliquid_mcp.__main__ import main
+
+        with patch("sys.argv", ["hyperliquid-mcp"]):
+            with patch("asyncio.run"):
+                main()
 
         mock_logger.warning.assert_any_call(
             "Missing environment variables: ['HYPERLIQUID_PRIVATE_KEY']"
@@ -78,22 +109,20 @@ class TestMCPServerIntegration:
             "Some trading operations may not be available"
         )
         mock_logger.info.assert_called_with("Starting Hyperliquid MCP Server...")
-        mock_run.assert_called_once()
 
     def test_tool_docstrings(self):
         """Test that all tools have proper docstrings."""
-        for tool_name, tool in mcp._tool_manager._tools.items():
+        server = create_server(Config())
+        for tool_name, tool in server._tool_manager._tools.items():
             func = tool.fn
             assert func.__doc__ is not None, f"Tool {tool_name} missing docstring"
             assert (
                 len(func.__doc__.strip()) > 0
             ), f"Tool {tool_name} has empty docstring"
 
-            # Check that docstring contains Returns section (Args may not be present for no-param functions)
             docstring = func.__doc__
             assert "Returns:" in docstring, f"Tool {tool_name} missing Returns section"
 
-            # Check if function takes parameters and ensure Args section exists if it does
             import inspect
 
             sig = inspect.signature(func)

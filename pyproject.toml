@@ -4,10 +4,8 @@ version = "1.0.3"
 description = "A server that exposes a set of tools for interacting with the Hyperliquid decentralized exchange. It simplifies trading operations by providing a high-level API for placing, canceling, and modifying orders, as well as managing account settings and retrieving market data."
 readme = "README.md"
 requires-python = ">=3.11"
-license = {file = "LICENSE"}
-authors = [
-    {name = "Minh DOAN", email = "midogax272@gmail.com"}
-]
+license = { file = "LICENSE" }
+authors = [{ name = "Minh DOAN", email = "midogax272@gmail.com" }]
 keywords = ["hyperliquid", "trading", "mcp", "crypto", "defi", "exchange"]
 classifiers = [
     "Development Status :: 4 - Beta",
@@ -26,10 +24,11 @@ dependencies = [
     "hyperliquid-python-sdk>=0.16.0",
     "pydantic>=2.11.7",
     "python-dotenv>=1.1.1",
+    "uvicorn>=0.30.0",
 ]
 
 [project.scripts]
-hyperliquid-mcp = "hyperliquid_mcp.server:main"
+hyperliquid-mcp = "hyperliquid_mcp.__main__:main"
 
 [build-system]
 requires = ["hatchling"]

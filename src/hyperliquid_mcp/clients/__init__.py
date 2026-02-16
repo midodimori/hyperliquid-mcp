@@ -1,4 +1,4 @@
-"""Tools for Hyperliquid MCP."""
+"""Clients for Hyperliquid MCP."""
 
 from .account import AccountClient
 from .base_client import BaseHyperliquidClient, HyperliquidConnection

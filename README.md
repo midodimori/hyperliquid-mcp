@@ -11,6 +11,7 @@ A Model Context Protocol (MCP) server that provides comprehensive tools for inte
 - **Account Management** - Positions, balances, transfers, and leverage control
 - **Order Management** - Place, cancel, modify orders with advanced features
 - **Market Data** - Real-time prices, orderbooks, candles, and funding rates
+- **Multiple Transports** - stdio, HTTP (Streamable HTTP), and SSE support
 - **Risk Management** - Comprehensive validation and error handling
 - **Type Safety** - Full Pydantic validation for all inputs
 - **Error Handling** - Comprehensive error reporting and logging
@@ -20,7 +21,14 @@ A Model Context Protocol (MCP) server that provides comprehensive tools for inte
 ### Using uvx (Recommended)
 
 ```bash
+# Run with stdio (default)
 uvx hyperliquid-mcp
+
+# Run with HTTP transport
+uvx hyperliquid-mcp --transport http --port 3000
+
+# Run with SSE transport
+uvx hyperliquid-mcp --transport sse --port 3000
 ```
 
 ### Using uv
@@ -35,6 +43,19 @@ uv run hyperliquid-mcp
 ```bash
 pip install hyperliquid-mcp
 hyperliquid-mcp
+```
+
+### CLI Options
+
+```
+hyperliquid-mcp [OPTIONS]
+
+Options:
+  --transport, -t {stdio,http,sse}  Transport type (default: stdio)
+  --host HOST                       Host to bind to (default: localhost)
+  --port, -p PORT                   Port to listen on (default: 3000)
+  --log-level, -l {debug,info,warn,error}  Log level (default: info)
+  --version, -v                     Show version and exit
 ```
 
 ## ⚙️ Configuration
@@ -129,6 +150,30 @@ Add to your Claude Desktop `claude_desktop_config.json`:
         "HYPERLIQUID_MCP_SHOW_LOGS": "false"
       },
       "transport": "stdio"
+    }
+  }
+}
+```
+
+#### HTTP transport (for remote/multi-client setups):
+
+> ⚠️ **Note**: Environment variables (`HYPERLIQUID_PRIVATE_KEY`, etc.) must be exported in the shell where the server is started — they are **not** passed via the client config like with stdio.
+
+```bash
+# 1. Export env vars in your terminal
+export HYPERLIQUID_PRIVATE_KEY="your_private_key_here"
+export HYPERLIQUID_TESTNET="false"
+
+# 2. Start the server
+hyperliquid-mcp --transport http --port 3000
+```
+
+Then configure your MCP client to connect:
+```json
+{
+  "mcpServers": {
+    "hyperliquid": {
+      "url": "http://localhost:3000/mcp"
     }
   }
 }
@@ -315,15 +360,24 @@ make help
 hyperliquid-mcp/
 ├── src/hyperliquid_mcp/
 │   ├── __init__.py
-│   ├── server.py          # MCP server implementation
-│   ├── models.py          # Pydantic models
+│   ├── __main__.py        # CLI entry point (argparse)
+│   ├── server.py          # Server factory (create_server)
+│   ├── config.py          # Pydantic configuration models
+│   ├── models.py          # Request/response models
 │   ├── logging_config.py  # Logging configuration
-│   └── tools/             # Tool implementations
-│       ├── __init__.py
-│       ├── base_client.py # Base client for Hyperliquid API
-│       ├── account.py     # Account management tools
-│       ├── market.py      # Market data tools
-│       └── order.py       # Order management tools
+│   ├── capabilities/      # MCP tool registrations
+│   │   ├── account.py     # Account tools (5)
+│   │   ├── market.py      # Market data tools (5)
+│   │   └── order.py       # Order management tools (9)
+│   ├── clients/           # Hyperliquid API clients
+│   │   ├── base_client.py # Base client & connection
+│   │   ├── account.py     # Account operations
+│   │   ├── market.py      # Market data operations
+│   │   └── order.py       # Order operations
+│   └── transports/        # Transport runners
+│       ├── stdio.py       # stdio transport (default)
+│       ├── http.py        # Streamable HTTP transport
+│       └── sse.py         # SSE transport
 ├── tests/
 │   ├── test_server.py     # Tool function tests
 │   └── test_mcp_integration.py  # MCP integration tests
